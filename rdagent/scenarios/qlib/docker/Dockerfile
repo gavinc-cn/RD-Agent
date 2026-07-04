@@ -22,3 +22,6 @@ RUN python -m pip install -e .
 RUN pip install catboost
 RUN pip install xgboost
 RUN pip install tables
+
+ENV MLFLOW_ALLOW_FILE_STORE=true
+RUN pip install --upgrade 'scipy>=1.13,<2.0'
