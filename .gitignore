@@ -188,3 +188,5 @@ AGENTS.md
 !rdagent/**/AGENTS.md
 
 scripts/
+
+.idea/
