@@ -1,0 +1,103 @@
+####################################################################
+# RD-Agent docker-compose
+# ------------------------------------------------------------------
+# 常用命令:
+#   1) 构建镜像:
+#        docker compose build
+#      若需要 GPU (torch) 或 抓论文 (chromium):
+#        docker compose build --build-arg INSTALL_TORCH=true
+#        docker compose build --build-arg INSTALL_CHROMIUM=true
+#
+#   2) 启动交互式 UI (Streamlit, 浏览器开 http://localhost:19899):
+#        docker compose up ui
+#
+#   3) 一次性跑某个 agent loop (用 runner profile):
+#        docker compose run --rm runner rdagent fin_factor
+#        docker compose run --rm runner rdagent data_science --competition titanic
+#        docker compose run --rm runner rdagent llm_finetune --base-model ...
+#
+#   4) 起带前端构建的 server_ui (需先 build 前端, 见 doc_ai 文档):
+#        docker compose --profile server-ui up server-ui
+#
+# 前置: 在仓库根目录准备 .env (可从 docker/.env.docker.example 复制),
+#       至少填好 CHAT_MODEL / EMBEDDING_MODEL / OPENAI_API_KEY 等。
+####################################################################
+
+# 公共配置锚点: 所有服务共享, 改一处全生效
+x-rdagent-common: &rdagent_common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+    args:
+      PYTHON_VERSION: "3.10"
+      # 按需打开:
+      # INSTALL_TORCH: "true"
+      # INSTALL_CHROMIUM: "true"
+  image: rdagent:dev
+  working_dir: /app
+  env_file:
+    - .env                # compose 既用它做变量插值, 也把它注入容器环境
+  environment:
+    # 把 prompt cache 落到挂载的数据卷, 避免单文件挂载 (Windows 友好)
+    PROMPT_CACHE_PATH: /app/git_ignore_folder/prompt_cache.db
+  init: true              # tini 做 PID 1, 信号/僵尸进程处理
+  shm_size: 1g            # 部分 ML 场景需要更大共享内存
+  volumes:
+    # 关键: 挂宿主机 docker socket, 让容器内能 spawn 沙箱容器 (DooD)
+    # Windows Docker Desktop + Linux 容器: 这一行同样有效。
+    - /var/run/docker.sock:/var/run/docker.sock
+    # 数据持久化 (bind 到仓库根目录, 和原生安装的目录布局一致,
+    # 方便在 Windows 资源管理器里直接看 log / workspace 产物)
+    - ./git_ignore_folder:/app/git_ignore_folder
+    - ./log:/app/log
+    - ./pickle_cache:/app/pickle_cache
+    # 开发模式: 取消下行注释可把宿主机源码挂进去热改
+    # - ./rdagent:/app/rdagent
+
+services:
+  # ----- 交互式 UI (Streamlit) -----
+  ui:
+    <<: *rdagent_common
+    container_name: rdagent-ui
+    ports:
+      - "19899:19899"
+    command: ["rdagent", "ui", "--port", "19899", "--log-dir", "/app/log"]
+
+  # ----- 一次性命令 / agent loop (默认不随 `up` 启动) -----
+  # 用法: docker compose run --rm runner <rdagent 子命令>
+  runner:
+    <<: *rdagent_common
+    container_name: rdagent-runner
+    profiles: ["cli"]
+    command: ["rdagent", "health_check"]
+
+  # ----- server_ui (Flask + 构建好的前端) -----
+  # 需要先 build 前端到 git_ignore_folder/static, 见 doc_ai 文档。
+  server-ui:
+    <<: *rdagent_common
+    container_name: rdagent-server-ui
+    profiles: ["server-ui"]
+    ports:
+      - "19899:19899"
+    environment:
+      PROMPT_CACHE_PATH: /app/git_ignore_folder/prompt_cache.db
+      UI_STATIC_PATH: /app/git_ignore_folder/static
+    command: ["rdagent", "server_ui", "--port", "19899"]
+
+  # ----- data_science 用户交互端口 (如需 19900) -----
+  ds-interact:
+    <<: *rdagent_common
+    container_name: rdagent-ds-interact
+    profiles: ["ds"]
+    ports:
+      - "19900:19900"
+    command: ["rdagent", "ds_user_interact", "--port", "19900"]
+
+# GPU 支持 (finetune / data_science 等场景按需打开): 在对应服务下加
+#   deploy:
+#     resources:
+#       reservations:
+#         devices:
+#           - driver: nvidia
+#             count: all
+#             capabilities: [gpu]

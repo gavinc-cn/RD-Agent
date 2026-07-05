@@ -1,0 +1,36 @@
+# 运行期产物 / 数据, 不应进镜像
+git_ignore_folder/
+log/
+pickle_cache/
+prompt_cache.db
+
+# 本地密钥 / 配置 (.env 在运行时通过 bind mount 或 env_file 注入)
+.env
+.env.*
+!.env.example
+
+# Python 缓存
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 前端构建产物 / 依赖
+web/node_modules/
+web/dist/
+
+# 版本控制 (setuptools-scm 用 SETUPTOOLS_SCM_PRETEND_VERSION 兜底)
+.git/
+.gitignore
+
+# 文档 / IDE / CI, 运行时不需要
+docs/
+doc_ai/
+*.md
+!README.md
+.idea/
+.vscode/
+.devcontainer/
