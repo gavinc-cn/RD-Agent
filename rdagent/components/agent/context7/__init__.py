@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic_ai.mcp import MCPClient as MCPServerStreamableHTTP
+from pydantic_ai.mcp import MCPServerStreamableHTTP
 
 from rdagent.components.agent.base import PAIAgent
 from rdagent.components.agent.context7.conf import SETTINGS
