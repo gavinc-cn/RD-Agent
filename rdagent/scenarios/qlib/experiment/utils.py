@@ -18,7 +18,7 @@ def generate_data_folder_from_qlib():
     # Run the Qlib backtest
     execute_log = qtde.check_output(
         local_path=str(template_path),
-        entry=f"cd factor_data_template && python generate.py",
+        entry=f"python /workspace/qlib_workspace/factor_data_template/generate.py",
     )
 
     assert (Path(__file__).parent / "factor_data_template" / "daily_pv_all.h5").exists(), (
