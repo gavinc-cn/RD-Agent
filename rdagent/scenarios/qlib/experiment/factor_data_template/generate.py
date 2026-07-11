@@ -1,4 +1,9 @@
 import qlib
+import os
+
+# Get the current directory and construct the correct output path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+output_dir = current_dir  # Same directory as the script
 
 qlib.init(provider_uri="~/.qlib/qlib_data/cn_data")
 
@@ -8,7 +13,7 @@ instruments = D.instruments()
 fields = ["$open", "$close", "$high", "$low", "$volume", "$factor"]
 data = D.features(instruments, fields, freq="day").swaplevel().sort_index().loc["2008-12-29":].sort_index()
 
-data.to_hdf("./daily_pv_all.h5", key="data")
+data.to_hdf(os.path.join(output_dir, "daily_pv_all.h5"), key="data")
 
 
 fields = ["$open", "$close", "$high", "$low", "$volume", "$factor"]
@@ -24,4 +29,4 @@ data = (
     .sort_index()
 )
 
-data.to_hdf("./daily_pv_debug.h5", key="data")
+data.to_hdf(os.path.join(output_dir, "daily_pv_debug.h5"), key="data")
