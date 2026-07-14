@@ -12,14 +12,20 @@ from rdagent.utils.env import QTDockerEnv
 
 def generate_data_folder_from_qlib():
     template_path = Path(__file__).parent / "factor_data_template"
-    qtde = QTDockerEnv()
-    qtde.prepare()
 
-    # Run the Qlib backtest
-    execute_log = qtde.check_output(
-        local_path=str(template_path),
-        entry=f"python /workspace/qlib_workspace/factor_data_template/generate.py",
-    )
+    # Skip Docker execution if data files already exist
+    # (e.g., generated locally in Docker-out-of-Docker environments where bind mounts don't work)
+    if (template_path / "daily_pv_all.h5").exists() and (template_path / "daily_pv_debug.h5").exists():
+        pass  # Files already exist, skip Docker generation
+    else:
+        qtde = QTDockerEnv()
+        qtde.prepare()
+
+        # Run the Qlib backtest
+        execute_log = qtde.check_output(
+            local_path=str(template_path),
+            entry=f"python /workspace/qlib_workspace/factor_data_template/generate.py",
+        )
 
     assert (Path(__file__).parent / "factor_data_template" / "daily_pv_all.h5").exists(), (
         "daily_pv_all.h5 is not generated. It means rdagent/scenarios/qlib/experiment/factor_data_template/generate.py is not executed correctly. Please check the log: \n"

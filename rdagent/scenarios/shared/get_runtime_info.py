@@ -13,6 +13,17 @@ def get_runtime_environment_by_env(env: Env) -> str:
     stdout = implementation.execute(env=env, entry=f"python {fname}")
     # Extract JSON from stdout (skip CUDA/container warnings)
     json_match = re.search(r"\{.*\}", stdout, re.DOTALL)
+    if json_match is None:
+        # Fallback: run runtime_info.py locally when Docker execution doesn't produce valid output
+        # (e.g., in Docker-out-of-Docker environments where bind mounts don't work)
+        import subprocess
+        import sys
+        script_path = Path(__file__).absolute().resolve().parent / "runtime_info.py"
+        result = subprocess.run([sys.executable, str(script_path)], capture_output=True, text=True)
+        local_stdout = result.stdout
+        json_match = re.search(r"\{.*\}", local_stdout, re.DOTALL)
+        if json_match is None:
+            raise RuntimeError(f"Failed to get runtime environment info from both Docker and local execution. Docker stdout: {stdout}, Local stdout: {local_stdout}")
     return json.dumps(json.loads(json_match.group()), indent=2)
 
 
